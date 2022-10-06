@@ -12,7 +12,7 @@ class RoomSerializer(serializers.ModelSerializer):
                 queryset=Room.objects.all(),
                 message='Find another name.'
             )]
-                                 )
+            )
 
     class Meta:
         model = Room
