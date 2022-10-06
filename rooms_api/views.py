@@ -1,3 +1,98 @@
-from django.shortcuts import render
+from django.http import Http404
+from django.shortcuts import get_list_or_404
+from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
+from rest_framework.generics import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rooms_api.models import Reservation, Room
+from rooms_api.permissions import IsOwnerOrReadOnly, RoomManagerPermission, FinishReservationPermission
+from rooms_api.serializers import ReservationSerializer, RoomSerializer, ConfirmationSerializer, \
+    FinishReservationSerializer, CancelSerializer, ReservationWithPasswordSerializer, ReservationCreateSerializer
 
-# Create your views here.
+
+class RoomViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    queryset = Room.objects.all()
+    serializer_class = RoomSerializer
+
+
+class ReservationViewSet(viewsets.ModelViewSet):
+    """
+    This viewset automatically provides `list`, `create`, `retrieve`,
+    `update` and `destroy` actions.
+    Additionally we also provide an extra `highlight` action.
+    """
+    queryset = Reservation.objects.all()
+    serializer_class = ReservationSerializer
+    permission_classes = (
+        permissions.IsAuthenticatedOrReadOnly,
+        IsOwnerOrReadOnly, IsAuthenticated)
+
+    def get_serializer_class(self):
+        """Return appropriate serializer class"""
+        if self.action == 'confirm':
+            return ConfirmationSerializer
+        elif self.action == 'finish':
+            return FinishReservationSerializer
+        elif self.action == 'cancel':
+            return CancelSerializer
+        elif self.action == 'create':
+            return ReservationCreateSerializer
+        return ReservationSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+    def retrieve(self, request, pk=None, room_pk=None):
+        item = get_object_or_404(self.queryset, pk=pk, room__pk=room_pk)
+        # breakpoint()
+        if item.owner == self.request.user and item.reservation_status == 1:
+            serializer = ReservationWithPasswordSerializer(item)
+            return Response(serializer.data)
+        serializer = self.get_serializer(item)
+        return Response(serializer.data)
+
+    def list(self, request, room_pk=None):
+        try:
+            items = get_list_or_404(self.queryset, room__pk=room_pk)
+        except (TypeError, ValueError):
+            raise Http404
+        else:
+            serializer = self.get_serializer(items, many=True)
+            return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], permission_classes=[RoomManagerPermission])
+    def confirm(self, request, pk=None, room_pk=None):
+        reservation = self.get_object()
+        serializer = self.get_serializer(reservation, data=request.data)
+        if serializer.is_valid():
+            reservation.reservation_status = serializer.validated_data['reservation_status']
+            reservation.save()
+            return Response({'message': 'Status zmieniono'}, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'],permission_classes=[IsOwnerOrReadOnly, FinishReservationPermission])
+    def finish(self, request, pk=None, room_pk=None):
+        reservation = self.get_object()
+        serializer = self.get_serializer(reservation, data=request.data)
+        if serializer.is_valid():
+            reservation.rating_choice = serializer.validated_data['rating_choice']
+            serializer.save()
+            return Response({'message':'The training has been assessed'}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], permission_classes=IsOwnerOrReadOnly)
+    def cancel(self, request, pk=None, room_pk=None):
+        reservation = self.get_object()
+        serializer = self.get_serializer(reservation, data=request.data)
+        if serializer.is_valid():
+            reservation.reservation_status = serializer.validated_data['reservation_status']
+            reservation.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        else:
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
