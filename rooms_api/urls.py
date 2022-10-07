@@ -1,11 +1,11 @@
 from django.urls import path, include
-# from rest_framework.routers import SimpleRouter
+from rest_framework.routers import SimpleRouter
 from rest_framework import routers
 from rest_framework_nested import routers
 from rooms_api import views
 
 
-router = routers.SimpleRouter()
+router = SimpleRouter()
 router.register('rooms', views.RoomViewSet)
 rooms_router = routers.NestedSimpleRouter(
     router,
