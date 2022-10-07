@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rooms_api.models import Reservation, Room
 from rooms_api.permissions import IsOwnerOrReadOnly, RoomManagerPermission
 from rooms_api.serializers import ReservationSerializer, RoomSerializer, ConfirmationSerializer, \
-    FinishReservationSerializer, CancelSerializer, ReservationWithPasswordSerializer, ReservationCreateSerializer
+    FinishReservationSerializer, CancelSerializer, ReservationWithPasswordSerializer
 
 
 class RoomViewSet(viewsets.ModelViewSet):
@@ -39,14 +39,13 @@ class ReservationViewSet(viewsets.ModelViewSet):
             return FinishReservationSerializer
         elif self.action == 'cancel':
             return CancelSerializer
-        elif self.action == 'create':
-            return ReservationCreateSerializer
+        # elif self.action == 'create':
+        #     return ReservationCreateSerializer
         return ReservationSerializer
 
-    def create(self, request, room_pk=None):
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
+    def destroy(self, request, pk=None, room_pk=None):
+        response = {'message': 'Delete function is not offered in this path.'}
+        return Response(response, status=status.HTTP_403_FORBIDDEN)
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)

@@ -33,7 +33,7 @@ def room(user):
 
 @pytest.fixture
 def reservation(room, user):
-    return Reservation.objects.create(training_name="Grey",
+    return Reservation.objects.create(training="Grey",
                                       date_from= '2022-9-25',
                                       date_to='2022-9-25',
                                       owner=user,

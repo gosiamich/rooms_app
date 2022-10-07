@@ -9,38 +9,16 @@ from rooms_api.models import Room, Reservation
 
 
 class RoomSerializer(serializers.ModelSerializer):
-    name = serializers.CharField(max_length=255,validators=[
-            UniqueValidator(
-                queryset=Room.objects.all(),
-                message='Find another name.'
-            )]
-            )
+    name = serializers.CharField(max_length=255, validators=[
+        UniqueValidator(
+            queryset=Room.objects.all(),
+            message='Find another name.'
+        )]
+                                 )
 
     class Meta:
         model = Room
         fields = ['name', 'pk', 'room_manager']
-
-
-class ReservationCreateSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Reservation
-        fields = ['pk', 'room',  'training', 'date_from', 'date_to']
-
-    def validate(self, data):
-        """
-        Check that start is before finish and there are no other reservation at this period.
-        """
-        if data['date_from'] > data['date_to']:
-            raise serializers.ValidationError('Finish must occur after start')
-        return data
-        if data['date_from'] < datetime.date.today():
-            raise serializers.ValidationError('Enter dates from future')
-        return data
-        if len(Reservation.objects.filter(room=data['room'], reservation_status__in=[2, 3])
-                           .filter(date_from__gte=data['date_from'], date_to__lte=data['date_to'])) > 0:
-            raise serializers.ValidationError('Room is reserved at this term')
-        return data
 
 
 class ReservationSerializer(serializers.ModelSerializer):
@@ -48,8 +26,23 @@ class ReservationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Reservation
-        fields = ['pk', 'room', 'owner', 'date_from', 'date_to', 'reservation_status', 'comment', 'rating']
+        fields = ['pk', 'room', 'owner', 'date_from', 'date_to', 'training', 'reservation_status', 'comment', 'rating']
         read_only_fields = ['reservation_status', 'owner', 'rating']
+
+    def validate(self, data):
+        """
+        Check that start is before finish and there are no other reservation at this period.
+        """
+        if data['date_from'] > data['date_to']:
+            raise serializers.ValidationError('Finish must occur after start')
+        data
+        if data['date_from'] < datetime.date.today():
+            raise serializers.ValidationError('Enter dates from future')
+        data
+        if len(Reservation.objects.filter(room=data['room'], reservation_status__in=[2, 3])
+                       .filter(date_from__gte=data['date_from'], date_to__lte=data['date_to'])) > 0:
+            raise serializers.ValidationError('Room is reserved at this term')
+        return data
 
 
 class ReservationWithPasswordSerializer(serializers.ModelSerializer):
@@ -57,7 +50,8 @@ class ReservationWithPasswordSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Reservation
-        fields = ['pk', 'room', 'owner', 'training', 'date_from', 'date_to', 'reservation_status', 'comment', 'room_password',
+        fields = ['pk', 'room', 'owner', 'training', 'date_from', 'date_to', 'reservation_status', 'comment',
+                  'room_password',
                   'rating']
         read_only_fields = ['owner']
 
@@ -85,7 +79,7 @@ class FinishReservationSerializer:
 
 class CancelSerializer(serializers.ModelSerializer):
     reservation_status = serializers.ChoiceField(choices=(
-    (1, 'Confirmed'),
+        (1, 'Confirmed'),
         (2, 'Cancelled'),
         (3, 'Rejected'),
     )

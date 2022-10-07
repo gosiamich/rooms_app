@@ -86,3 +86,4 @@ coverage.xml
 
 
 rooms_app/VENV
+rooms_app/db.sqlite3

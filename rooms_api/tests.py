@@ -56,6 +56,7 @@ def test_create_room_wrong_data_RoomViewSet(client, superuser, room):
     response = client.post("/api/rooms/", new_room, format='json')
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
+
 @pytest.mark.django_db
 def test_create_room_duplicate_name_RoomViewSet(client, superuser, room):
     client.force_login(superuser)
@@ -88,18 +89,47 @@ def test_create_reservation_ReservationViewSet(client, superuser, room):
 
 @freeze_time('2022-10-06 00:00:00')
 @pytest.mark.django_db
-def test_create_reservation_past_days_ReservationViewSet(client, superuser, room):
+def test_create_reservation_invalid_data_ReservationViewSet(client, superuser, room):
     client.force_login(superuser)
     new_reservation = {
         'room': room.id,
-        'training': 'WCAG',
+        'training': '',
         'date_from': '2022-10-04',
         'date_to': '2022-10-04',
+    }
+    response = client.post("/api/rooms/<pk>/reservations/", new_reservation, format='json')
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@freeze_time('2022-10-06 00:00:00')
+@pytest.mark.django_db
+def test_create_reservation_invalid_dates_ReservationViewSet(client, superuser, room):
+    client.force_login(superuser)
+    new_reservation = {
+        'room': room.id,
+        'training': 'Test',
+        'date_from': '2022-10-30',
+        'date_to': '2022-10-20',
     }
     response = client.post("/api/rooms/<pk>/reservations/", new_reservation, format='json')
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     with pytest.raises(ValidationError):
         raise ValidationError('Finish must occur after start')
 
+
+@freeze_time('2022-10-06 00:00:00')
+@pytest.mark.django_db
+def test_create_reservation_dates_from_past_ReservationViewSet(client, superuser, room):
+    client.force_login(superuser)
+    new_reservation = {
+        'room': room.id,
+        'training': 'Test',
+        'date_from': '2022-08-30',
+        'date_to': '2022-09-20',
+    }
+    response = client.post("/api/rooms/<pk>/reservations/", new_reservation, format='json')
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    with pytest.raises(ValidationError):
+        raise ValidationError("Enter dates from future")
 
 
