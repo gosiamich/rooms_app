@@ -22,9 +22,5 @@ class RoomManagerPermission(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         return obj.room.room_manager == request.user
 
-class FinishReservationPermission(permissions.BasePermission):
-
-    def has_object_permission(self, request, view, obj):
-        return obj.data_to > datetime.date.now()
 
 

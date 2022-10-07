@@ -86,4 +86,20 @@ def test_create_reservation_ReservationViewSet(client, superuser, room):
         assert response.data[key] == value
 
 
+@freeze_time('2022-10-06 00:00:00')
+@pytest.mark.django_db
+def test_create_reservation_past_days_ReservationViewSet(client, superuser, room):
+    client.force_login(superuser)
+    new_reservation = {
+        'room': room.id,
+        'training': 'WCAG',
+        'date_from': '2022-10-04',
+        'date_to': '2022-10-04',
+    }
+    response = client.post("/api/rooms/<pk>/reservations/", new_reservation, format='json')
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    with pytest.raises(ValidationError):
+        raise ValidationError('Finish must occur after start')
+
+
 
