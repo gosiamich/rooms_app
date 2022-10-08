@@ -5,7 +5,7 @@ import pytest
 from freezegun import freeze_time
 from rest_framework import status
 
-from rooms_api.models import Room
+from rooms_api.models import Room, Reservation
 from rooms_api.serializers import RoomSerializer
 
 
@@ -17,19 +17,19 @@ def test_not_login_user_RoomViewSet_list(room):
 
 
 @pytest.mark.django_db
+def test_list_authenticatedUserRoomViewSet(client, room, superuser):
+    client.force_login(superuser)
+    response = client.get(f"/api/rooms/", {}, format='json')
+    assert response.status_code == 200
+    assert Room.objects.count() == len(response.data)
+
+
+@pytest.mark.django_db
 def test_get_room_details_RoomViewSet(client, room, superuser):
     client.force_login(superuser)
     response = client.get(f'/api/rooms/{room.id}/')
     assert response.status_code == 200
     assert response.data == RoomSerializer(instance=room).data
-
-
-@pytest.mark.django_db
-def test_authenticatedUserRoomViewSet_list(client, room, superuser):
-    client.force_login(superuser)
-    response = client.get(f"/api/rooms/", {}, format='json')
-    assert response.status_code == 200
-    assert Room.objects.count() == len(response.data)
 
 
 @pytest.mark.django_db
@@ -70,6 +70,37 @@ def test_create_room_duplicate_name_RoomViewSet(client, superuser, room):
         raise ValidationError('Find another name.')
 
 
+@pytest.mark.django_db
+def test_update_RoomViewSet(client, user, room):
+    client.force_login(user)
+    response = client.get(f"/api/rooms/{room.id}/", {}, format='json')
+    input_data = response.data
+    input_data["name"] = 'New name'
+    response = client.put(f"/api/rooms/{room.id}/", input_data, format='json')
+    assert response.status_code == 200
+    room.refresh_from_db()
+    assert room.name == 'New name'
+
+
+@pytest.mark.django_db
+def test_update_duplicate_name_RoomViewSet(client, user, room, room2):
+    client.force_login(user)
+    response = client.get(f"/api/rooms/{room.id}/", {}, format='json')
+    input_data = response.data
+    input_data["name"] = 'Grey'
+    response = client.put(f"/api/rooms/{room.id}/", input_data, format='json')
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    with pytest.raises(ValidationError):
+        raise ValidationError("Find another name.")
+
+@pytest.mark.django_db
+def test_list_ReservationViewSet(client, user, room, reservation):
+    client.force_login(user)
+    response = client.get("/api/rooms/{room.id}/reservations/", {}, format='json')
+    assert response.status_code == 200
+    assert Reservation.objects.count() == len(response.data)
+
+
 @freeze_time('2022-10-06 00:00:00')
 @pytest.mark.django_db
 def test_create_reservation_ReservationViewSet(client, superuser, room):
@@ -89,7 +120,7 @@ def test_create_reservation_ReservationViewSet(client, superuser, room):
 
 @freeze_time('2022-10-06 00:00:00')
 @pytest.mark.django_db
-def test_create_reservation_invalid_data_ReservationViewSet(client, superuser, room):
+def test_create_reservation_empty_data_ReservationViewSet(client, superuser, room):
     client.force_login(superuser)
     new_reservation = {
         'room': room.id,
@@ -131,5 +162,21 @@ def test_create_reservation_dates_from_past_ReservationViewSet(client, superuser
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     with pytest.raises(ValidationError):
         raise ValidationError("Enter dates from future")
+
+
+@freeze_time('2022-09-9 00:00:00')
+@pytest.mark.django_db
+def test_create_reservation_conflicting_dates_ReservationViewSet(client, superuser, room, reservation2):
+    client.force_login(superuser)
+    new_reservation = {
+        'room': room.id,
+        'training': 'Test',
+        'date_from': '2022-9-25',
+        'date_to': '2022-9-25',
+    }
+    response = client.post("/api/rooms/<pk>/reservations/", new_reservation, format='json')
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    with pytest.raises(ValidationError):
+        raise ValidationError('Room is reserved at this term')
 
 

@@ -30,11 +30,23 @@ def client():
 def room(user):
     return Room.objects.create(name="Yellow", room_manager=user)
 
+@pytest.fixture
+def room2(user):
+    return Room.objects.create(name='Grey', room_manager=user)
 
 @pytest.fixture
 def reservation(room, user):
     return Reservation.objects.create(training="Grey",
                                       date_from= '2022-9-25',
                                       date_to='2022-9-25',
+                                      owner=user,
+                                      room=room)
+
+@pytest.fixture
+def reservation2(room, user):
+    return Reservation.objects.create(training="Grey",
+                                      date_from= '2022-9-25',
+                                      date_to='2022-9-25',
+                                      reservation_status =1,
                                       owner=user,
                                       room=room)

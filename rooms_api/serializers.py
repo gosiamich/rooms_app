@@ -39,7 +39,7 @@ class ReservationSerializer(serializers.ModelSerializer):
         if data['date_from'] < datetime.date.today():
             raise serializers.ValidationError('Enter dates from future')
         data
-        if len(Reservation.objects.filter(room=data['room'], reservation_status__in=[2, 3])
+        if len(Reservation.objects.filter(room=data['room'], reservation_status__in=[1,])
                        .filter(date_from__gte=data['date_from'], date_to__lte=data['date_to'])) > 0:
             raise serializers.ValidationError('Room is reserved at this term')
         return data
