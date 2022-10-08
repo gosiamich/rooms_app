@@ -6,41 +6,41 @@ from freezegun import freeze_time
 from rest_framework import status
 
 from rooms_api.models import Room, Reservation
-from rooms_api.serializers import RoomSerializer
+from rooms_api.serializers import RoomSerializer, ReservationSerializer, ReservationWithPasswordSerializer
 
 
 @pytest.mark.django_db
 def test_not_login_user_RoomViewSet_list(room):
     client = Client()
     response = client.get(f"/api/rooms/", {}, format='json')
-    assert response.status_code == 403
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
 def test_list_authenticatedUserRoomViewSet(client, room, superuser):
     client.force_login(superuser)
     response = client.get(f"/api/rooms/", {}, format='json')
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert Room.objects.count() == len(response.data)
 
 
 @pytest.mark.django_db
-def test_get_room_details_RoomViewSet(client, room, superuser):
-    client.force_login(superuser)
+def test_get_room_details_RoomViewSet(client, room, user):
+    client.force_login(user)
     response = client.get(f'/api/rooms/{room.id}/')
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.data == RoomSerializer(instance=room).data
 
 
 @pytest.mark.django_db
-def test_post_room_RoomViewSet(client, superuser):
-    client.force_login(superuser)
+def test_post_room_RoomViewSet(client, user):
+    client.force_login(user)
     new_room = {
         'name': 'New room',
-        'room_manager': superuser.id,
+        'room_manager': user.id,
     }
     response = client.post("/api/rooms/", new_room, format='json')
-    assert response.status_code == 201
+    assert response.status_code == status.HTTP_201_CREATED
     for key, value in new_room.items():
         assert key in response.data
         assert response.data[key] == value
@@ -77,7 +77,7 @@ def test_update_RoomViewSet(client, user, room):
     input_data = response.data
     input_data["name"] = 'New name'
     response = client.put(f"/api/rooms/{room.id}/", input_data, format='json')
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     room.refresh_from_db()
     assert room.name == 'New name'
 
@@ -93,12 +93,25 @@ def test_update_duplicate_name_RoomViewSet(client, user, room, room2):
     with pytest.raises(ValidationError):
         raise ValidationError("Find another name.")
 
+
+"""Testing reservations"""
+
+
 @pytest.mark.django_db
 def test_list_ReservationViewSet(client, user, room, reservation):
     client.force_login(user)
-    response = client.get("/api/rooms/{room.id}/reservations/", {}, format='json')
-    assert response.status_code == 200
+    response = client.get(f"/api/rooms/{room.id}/reservations/", {}, format='json')
+    assert response.status_code == status.HTTP_200_OK
     assert Reservation.objects.count() == len(response.data)
+
+
+@pytest.mark.django_db
+def test_delete_reservation_ReservationViewSet(client, user, room, reservation):
+    client.force_login(user)
+    response = client.delete(f"/api/rooms/{room.id}/reservations/{reservation.id}/", format='json')
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    with pytest.raises(ValidationError):
+        raise ValidationError("Delete function is not offered in this path.")
 
 
 @freeze_time('2022-10-06 00:00:00')
@@ -112,7 +125,7 @@ def test_create_reservation_ReservationViewSet(client, superuser, room):
         'date_to': '2022-10-25',
     }
     response = client.post("/api/rooms/<pk>/reservations/", new_reservation, format='json')
-    assert response.status_code == 201
+    assert response.status_code == status.HTTP_201_CREATED
     for key, value in new_reservation.items():
         assert key in response.data
         assert response.data[key] == value
@@ -179,4 +192,32 @@ def test_create_reservation_conflicting_dates_ReservationViewSet(client, superus
     with pytest.raises(ValidationError):
         raise ValidationError('Room is reserved at this term')
 
+
+@pytest.mark.django_db
+def test_get_reservation_details_ReservationViewSet(client, room, reservation, user):
+    client.force_login(user)
+    response = client.get(f"/api/rooms/{room.id}/reservations/{reservation.id}/", format='json')
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data == ReservationSerializer(instance=reservation).data
+
+
+@pytest.mark.django_db
+def test_get_reservation_details_with_password_ReservationViewSet(client, room, reservation2, user):
+    client.force_login(user)
+    response = client.get(f"/api/rooms/{room.id}/reservations/{reservation2.id}/", format='json')
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data == ReservationWithPasswordSerializer(instance=reservation2).data
+    for field in ("room_password",):
+        assert field in response.data
+
+
+@pytest.mark.django_db
+def test_unauthorized_attempt_update_ReservationViewSet(client, simple_user, room, reservation):
+    client.force_login(simple_user)
+    response = client.get(f"/api/rooms/{room.id}/reservations/{reservation.id}/", format='json')
+    input_data = response.data
+    input_data["comment"] = 'New comment'
+    # breakpoint()
+    response = client.put(f"/api/rooms/{room.id}/reservations/{reservation.id}/", input_data, format='json')
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 

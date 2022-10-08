@@ -6,7 +6,7 @@ from rooms_api import views
 
 
 router = SimpleRouter()
-router.register('rooms', views.RoomViewSet)
+router.register('rooms', views.RoomViewSet, basename='rooms')
 rooms_router = routers.NestedSimpleRouter(
     router,
     r'rooms',
@@ -15,6 +15,7 @@ rooms_router = routers.NestedSimpleRouter(
 rooms_router.register(
     r'reservations',
     views.ReservationViewSet,
+basename='reservations'
 )
 app_name = 'rooms_api'
 

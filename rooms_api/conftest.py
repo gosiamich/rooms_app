@@ -1,7 +1,8 @@
 import pytest
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Permission
 from rest_framework.test import APIClient
 from rooms_api.models import Room, Reservation
+from rooms_api.permissions import RoomManagerPermission, IsOwnerOrReadOnly
 
 
 @pytest.fixture
@@ -19,34 +20,35 @@ def superuser():
 def user():
     return User.objects.create_user(username='gosia', password='gosia')
 
-
 @pytest.fixture
-def client():
-    client = APIClient()
-    return client
-
+def simple_user():
+    return User.objects.create_user(username='ktos', password='nowy')
 
 @pytest.fixture
 def room(user):
     return Room.objects.create(name="Yellow", room_manager=user)
 
+
 @pytest.fixture
 def room2(user):
     return Room.objects.create(name='Grey', room_manager=user)
 
+
 @pytest.fixture
 def reservation(room, user):
     return Reservation.objects.create(training="Grey",
-                                      date_from= '2022-9-25',
-                                      date_to='2022-9-25',
+                                      date_from='2022-09-25',
+                                      date_to='2022-09-25',
                                       owner=user,
                                       room=room)
+
 
 @pytest.fixture
 def reservation2(room, user):
     return Reservation.objects.create(training="Grey",
-                                      date_from= '2022-9-25',
-                                      date_to='2022-9-25',
-                                      reservation_status =1,
+                                      date_from='2022-09-25',
+                                      date_to='2022-09-25',
+                                      reservation_status=1,
+                                      room_password ="MWuiSh079S",
                                       owner=user,
                                       room=room)
