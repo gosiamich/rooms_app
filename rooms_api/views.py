@@ -27,9 +27,7 @@ class ReservationViewSet(viewsets.ModelViewSet):
     """
     queryset = Reservation.objects.all()
     serializer_class = ReservationSerializer
-    permission_classes = (
-        permissions.IsAuthenticatedOrReadOnly,
-        IsOwnerOrReadOnly, IsAuthenticated)
+    permission_classes = (IsOwnerOrReadOnly, IsAuthenticated)
 
     def get_serializer_class(self):
         """Return appropriate serializer class"""
@@ -85,13 +83,19 @@ class ReservationViewSet(viewsets.ModelViewSet):
         reservation = self.get_object()
         serializer = self.get_serializer(reservation, data=request.data)
         if serializer.is_valid():
-            if reservation.reservation_status == 1 and reservation.date_to < datetime.date.now():
-                reservation.rating_choice = serializer.validated_data['rating_choice']
-                serializer.save()
-                return Response({'message': 'The training has been assessed'}, status=status.HTTP_200_OK)
+            if reservation.reservation_status == 1 and reservation.date_to < datetime.date.today():
+                if not reservation.rating:
+                    reservation.rating = serializer.validated_data['rating']
+                    serializer.save()
+                    return Response({'message': 'The training has been assessed'}, status=status.HTTP_200_OK)
+                else:
+                    return Response({'message': 'You can add evaluation only once.'},
+                                    status=status.HTTP_400_BAD_REQUEST)
             else:
-                raise serializer.ValidationError('You can add evaluation of the training after event.')
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'message': 'You can add evaluation after training.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None, room_pk=None):

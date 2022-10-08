@@ -83,7 +83,7 @@ def test_update_RoomViewSet(client, user, room):
 
 
 @pytest.mark.django_db
-def test_update_duplicate_name_RoomViewSet(client, user, room, room2):
+def test_update_duplicate_name_RoomViewSet(client, user, room, room_simple_user):
     client.force_login(user)
     response = client.get(f"/api/rooms/{room.id}/", {}, format='json')
     input_data = response.data
@@ -184,8 +184,8 @@ def test_create_reservation_conflicting_dates_ReservationViewSet(client, superus
     new_reservation = {
         'room': room.id,
         'training': 'Test',
-        'date_from': '2022-9-25',
-        'date_to': '2022-9-25',
+        'date_from': '2022-9-24',
+        'date_to': '2022-9-24',
     }
     response = client.post("/api/rooms/<pk>/reservations/", new_reservation, format='json')
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -220,4 +220,84 @@ def test_unauthorized_attempt_update_ReservationViewSet(client, simple_user, roo
     # breakpoint()
     response = client.put(f"/api/rooms/{room.id}/reservations/{reservation.id}/", input_data, format='json')
     assert response.status_code == status.HTTP_403_FORBIDDEN
+    reservation.refresh_from_db()
+    assert reservation.comment != "New comment"
 
+
+@pytest.mark.django_db
+def test_forbidden_finish_ReservationViewSet(client, simple_user, room, reservation):
+    finish_url = f"/api/rooms/{room.id}/reservations/{reservation.id}/finish/"
+    client.force_login(simple_user)
+    response = client.post(finish_url, format='json')
+    input_data = response.data
+    input_data["rating"] = 2.0
+    response = client.post(finish_url, input_data, format='json')
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    reservation.refresh_from_db()
+    assert not reservation.rating
+
+
+@freeze_time('2022-09-28 00:00:00')
+@pytest.mark.django_db
+def test_finish_ReservationViewSet(client, user, room, reservation2):
+    finish_url = f"/api/rooms/{room.id}/reservations/{reservation2.id}/finish/"
+    client.force_login(user)
+    response = client.post(finish_url, format='json')
+    input_data = response.data
+    input_data["rating"] = 2.0
+    response = client.post(finish_url, input_data, format='json')
+    assert response.status_code == status.HTTP_200_OK
+    reservation2.refresh_from_db()
+    assert reservation2.rating == 2.0
+
+
+@pytest.mark.django_db
+def test_forbidden_confirm_ReservationViewSet(client, simple_user, room, reservation):
+    confirm_url = f"/api/rooms/{room.id}/reservations/{reservation.id}/confirm/"
+    client.force_login(simple_user)
+    response = client.post(confirm_url, format='json')
+    input_data = response.data
+    input_data["reservation_status"] = 1
+    response = client.post(confirm_url, input_data, format='json')
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    reservation.refresh_from_db()
+    assert reservation.reservation_status == 0
+
+
+@pytest.mark.django_db
+def test_confirm_ReservationViewSet(client, user, room, reservation):
+    confirm_url = f"/api/rooms/{room.id}/reservations/{reservation.id}/confirm/"
+    client.force_login(user)
+    response = client.post(confirm_url, format='json')
+    input_data = response.data
+    input_data["reservation_status"] = 1
+    response = client.post(confirm_url, input_data, format='json')
+    assert response.status_code == status.HTTP_200_OK
+    reservation.refresh_from_db()
+    assert reservation.reservation_status == 1
+
+
+@pytest.mark.django_db
+def test_forbidden_cancel_ReservationViewSet(client, simple_user, room, reservation):
+    cancel_url = f"/api/rooms/{room.id}/reservations/{reservation.id}/cancel/"
+    client.force_login(simple_user)
+    response = client.post(cancel_url, format='json')
+    input_data = response.data
+    input_data["reservation_status"] = 2
+    response = client.post(cancel_url, input_data, format='json')
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    reservation.refresh_from_db()
+    assert reservation.reservation_status == 0
+
+
+@pytest.mark.django_db
+def test_cancel_ReservationViewSet(client, user, room, reservation):
+    cancel_url = f"/api/rooms/{room.id}/reservations/{reservation.id}/cancel/"
+    client.force_login(user)
+    response = client.post(cancel_url, format='json')
+    input_data = response.data
+    input_data["reservation_status"] = 2
+    response = client.post(cancel_url, input_data, format='json')
+    assert response.status_code == status.HTTP_200_OK
+    reservation.refresh_from_db()
+    assert reservation.reservation_status == 2

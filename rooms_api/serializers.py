@@ -39,7 +39,7 @@ class ReservationSerializer(serializers.ModelSerializer):
         if data['date_from'] < datetime.date.today():
             raise serializers.ValidationError('Enter dates from future')
         data
-        if len(Reservation.objects.filter(room=data['room'], reservation_status__in=[1,])
+        if len(Reservation.objects.filter(room=data['room'], reservation_status__in=[1, ])
                        .filter(date_from__gte=data['date_from'], date_to__lte=data['date_to'])) > 0:
             raise serializers.ValidationError('Room is reserved at this term')
         return data
@@ -69,12 +69,13 @@ class ConfirmationSerializer(serializers.ModelSerializer):
         fields = ['reservation_status']
 
 
-class FinishReservationSerializer:
+class FinishReservationSerializer(serializers.ModelSerializer):
     rating = serializers.ChoiceField(choices=Reservation.rating_choice)
 
     class Meta:
         model = Reservation
         fields = ['rating']
+
 
 
 class CancelSerializer(serializers.ModelSerializer):

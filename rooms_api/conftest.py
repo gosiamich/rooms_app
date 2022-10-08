@@ -30,8 +30,8 @@ def room(user):
 
 
 @pytest.fixture
-def room2(user):
-    return Room.objects.create(name='Grey', room_manager=user)
+def room_simple_user(simple_user):
+    return Room.objects.create(name='Grey', room_manager=simple_user)
 
 
 @pytest.fixture
@@ -46,9 +46,10 @@ def reservation(room, user):
 @pytest.fixture
 def reservation2(room, user):
     return Reservation.objects.create(training="Grey",
-                                      date_from='2022-09-25',
-                                      date_to='2022-09-25',
+                                      date_from='2022-09-24',
+                                      date_to='2022-09-24',
                                       reservation_status=1,
-                                      room_password ="MWuiSh079S",
+                                      room_password="MWuiSh079S",
                                       owner=user,
                                       room=room)
+
