@@ -15,6 +15,7 @@ class Room(models.Model):
         return f'Room: {self.name} room manager: {self.room_manager}'
 
 
+
 def generate_password():
     return get_random_string(10)
 
@@ -53,5 +54,3 @@ class Reservation(models.Model):
             current_date += timedelta(days=1)
         return date_list
 
-    # class Meta:
-    #     unique_together = ('room_id', 'get_dates',)

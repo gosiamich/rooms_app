@@ -1,8 +1,8 @@
 import pytest
-from django.contrib.auth.models import User, Permission
+from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 from rooms_api.models import Room, Reservation
-from rooms_api.permissions import RoomManagerPermission, IsOwnerOrReadOnly
+
 
 
 @pytest.fixture

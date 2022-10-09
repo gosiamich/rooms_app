@@ -1,6 +1,5 @@
 from django.urls import path, include
 from rest_framework.routers import SimpleRouter
-from rest_framework import routers
 from rest_framework_nested import routers
 from rooms_api import views
 
@@ -15,7 +14,7 @@ rooms_router = routers.NestedSimpleRouter(
 rooms_router.register(
     r'reservations',
     views.ReservationViewSet,
-basename='reservations'
+    basename='reservations'
 )
 app_name = 'rooms_api'
 

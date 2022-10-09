@@ -3,6 +3,7 @@ from django.test import TestCase
 from django.test import Client
 import pytest
 from freezegun import freeze_time
+from freezegun.api import FakeDate
 from rest_framework import status
 
 from rooms_api.models import Room, Reservation
@@ -212,7 +213,7 @@ def test_get_reservation_details_with_password_ReservationViewSet(client, room, 
 
 
 @pytest.mark.django_db
-def test_unauthorized_attempt_update_ReservationViewSet(client, simple_user, room, reservation):
+def test_forbidden_update_ReservationViewSet(client, simple_user, room, reservation):
     client.force_login(simple_user)
     response = client.get(f"/api/rooms/{room.id}/reservations/{reservation.id}/", format='json')
     input_data = response.data
@@ -222,6 +223,58 @@ def test_unauthorized_attempt_update_ReservationViewSet(client, simple_user, roo
     assert response.status_code == status.HTTP_403_FORBIDDEN
     reservation.refresh_from_db()
     assert reservation.comment != "New comment"
+
+
+@freeze_time('2022-08-06 00:00:00')
+@pytest.mark.django_db
+def test_update_ReservationViewSet(client, user, room, reservation):
+    client.force_login(user)
+    response = client.get(f"/api/rooms/{room.id}/reservations/{reservation.id}/", format='json')
+    input_data = response.data
+    input_data["comment"] = 'adding comment'
+    response = client.put(f"/api/rooms/{room.id}/reservations/{reservation.id}/", input_data, format='json')
+    assert response.status_code == status.HTTP_200_OK
+    reservation.refresh_from_db()
+    assert reservation.comment == 'adding comment'
+
+@freeze_time('2022-08-06 00:00:00')
+@pytest.mark.django_db
+def test_invalid_dates_update_ReservationViewSet(client, user, room, reservation):
+    client.force_login(user)
+    response = client.get(f"/api/rooms/{room.id}/reservations/{reservation.id}/", format='json')
+    input_data = response.data
+    input_data["date_from"] = '2022-10-15'
+    input_data["date_to"] = '2022-10-05'
+    response = client.put(f"/api/rooms/{room.id}/reservations/{reservation.id}/", input_data, format='json')
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    with pytest.raises(ValidationError):
+        raise ValidationError('Finish must occur after start')
+
+@freeze_time('2022-08-06 00:00:00')
+@pytest.mark.django_db
+def test_past_dates_update_ReservationViewSet(client, user, room, reservation):
+    client.force_login(user)
+    response = client.get(f"/api/rooms/{room.id}/reservations/{reservation.id}/", format='json')
+    input_data = response.data
+    input_data["date_from"] = '2022-07-15'
+    input_data["date_to"] = '2022-07-15'
+    response = client.put(f"/api/rooms/{room.id}/reservations/{reservation.id}/", input_data, format='json')
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    with pytest.raises(ValidationError):
+        raise ValidationError('Enter dates from future')
+
+@freeze_time('2022-08-06 00:00:00')
+@pytest.mark.django_db
+def test_conflicting_dates_update_ReservationViewSet(client, user, room, reservation, reservation2):
+    client.force_login(user)
+    response = client.get(f"/api/rooms/{room.id}/reservations/{reservation.id}/", format='json')
+    input_data = response.data
+    input_data["date_from"] = '2022-09-24'
+    input_data["date_to"] = '2022-09-24'
+    response = client.put(f"/api/rooms/{room.id}/reservations/{reservation.id}/", input_data, format='json')
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    with pytest.raises(ValidationError):
+        raise ValidationError('Room is reserved at this term')
 
 
 @pytest.mark.django_db

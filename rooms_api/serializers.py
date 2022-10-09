@@ -1,7 +1,4 @@
 import datetime
-
-from django.contrib.admin import action
-from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
@@ -50,17 +47,14 @@ class ReservationWithPasswordSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Reservation
-        fields = ['pk', 'room', 'owner', 'training', 'date_from', 'date_to', 'reservation_status', 'comment',
-                  'room_password',
-                  'rating']
-        read_only_fields = ['owner']
+        fields = ['pk', 'room', 'owner', 'training', 'date_from', 'date_to',
+                  'reservation_status', 'comment', 'room_password', 'rating']
+        read_only_fields = ['owner',]
 
 
 class ConfirmationSerializer(serializers.ModelSerializer):
     reservation_status = serializers.ChoiceField(choices=(
         (1, 'Confirmed'),
-        (2, 'Cancelled'),
-        (3, 'Rejected'),
     )
     )
 
@@ -75,7 +69,6 @@ class FinishReservationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reservation
         fields = ['rating']
-
 
 
 class CancelSerializer(serializers.ModelSerializer):

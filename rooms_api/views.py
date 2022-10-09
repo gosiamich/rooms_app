@@ -1,8 +1,7 @@
 import datetime
-
 from django.http import Http404
 from django.shortcuts import get_list_or_404
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
@@ -20,11 +19,6 @@ class RoomViewSet(viewsets.ModelViewSet):
 
 
 class ReservationViewSet(viewsets.ModelViewSet):
-    """
-    This viewset automatically provides `list`, `create`, `retrieve`,
-    `update` and `destroy` actions.
-    Additionally we also provide an extra `highlight` action.
-    """
     queryset = Reservation.objects.all()
     serializer_class = ReservationSerializer
     permission_classes = (IsOwnerOrReadOnly, IsAuthenticated)
@@ -37,8 +31,6 @@ class ReservationViewSet(viewsets.ModelViewSet):
             return FinishReservationSerializer
         elif self.action == 'cancel':
             return CancelSerializer
-        # elif self.action == 'create':
-        #     return ReservationCreateSerializer
         return ReservationSerializer
 
     def destroy(self, request, pk=None, room_pk=None):
