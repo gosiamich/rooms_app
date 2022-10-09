@@ -3,7 +3,6 @@ from django.test import TestCase
 from django.test import Client
 import pytest
 from freezegun import freeze_time
-from freezegun.api import FakeDate
 from rest_framework import status
 
 from rooms_api.models import Room, Reservation
@@ -97,6 +96,10 @@ def test_update_duplicate_name_RoomViewSet(client, user, room, room_simple_user)
 
 """Testing reservations"""
 
+@pytest.mark.django_db
+def test_not_authorized_list_ReservationViewSet(client, room, reservation):
+    response = client.get(f"/api/rooms/{room.id}/reservations/", {}, format='json')
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 @pytest.mark.django_db
 def test_list_ReservationViewSet(client, user, room, reservation):
@@ -214,11 +217,11 @@ def test_get_reservation_details_with_password_ReservationViewSet(client, room, 
 
 @pytest.mark.django_db
 def test_forbidden_update_ReservationViewSet(client, simple_user, room, reservation):
+    """Simple user is not owner of reservation."""
     client.force_login(simple_user)
     response = client.get(f"/api/rooms/{room.id}/reservations/{reservation.id}/", format='json')
     input_data = response.data
     input_data["comment"] = 'New comment'
-    # breakpoint()
     response = client.put(f"/api/rooms/{room.id}/reservations/{reservation.id}/", input_data, format='json')
     assert response.status_code == status.HTTP_403_FORBIDDEN
     reservation.refresh_from_db()
@@ -279,6 +282,7 @@ def test_conflicting_dates_update_ReservationViewSet(client, user, room, reserva
 
 @pytest.mark.django_db
 def test_forbidden_finish_ReservationViewSet(client, simple_user, room, reservation):
+    """Only reservation's owner can add rating."""
     finish_url = f"/api/rooms/{room.id}/reservations/{reservation.id}/finish/"
     client.force_login(simple_user)
     response = client.post(finish_url, format='json')
@@ -288,6 +292,37 @@ def test_forbidden_finish_ReservationViewSet(client, simple_user, room, reservat
     assert response.status_code == status.HTTP_403_FORBIDDEN
     reservation.refresh_from_db()
     assert not reservation.rating
+
+@pytest.mark.django_db
+@freeze_time('2022-10-06 00:00:00')
+def test_attemp_before_training_finish_ReservationViewSet(client, user, room, reservation):
+    """Rating may be added after event"""
+    finish_url = f"/api/rooms/{room.id}/reservations/{reservation.id}/finish/"
+    client.force_login(user)
+    response = client.post(finish_url, format='json')
+    input_data = response.data
+    input_data["rating"] = 2.0
+    response = client.post(finish_url, input_data, format='json')
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    with pytest.raises(ValidationError):
+        raise ValidationError('You can add evaluation after training.')
+    assert not reservation.rating
+
+
+@pytest.mark.django_db
+@freeze_time('2022-08-06 00:00:00')
+def test_second_attemp_finish_ReservationViewSet(client, user, room, reservation_with_rating):
+    """Rating may be added after event"""
+    finish_url = f"/api/rooms/{room.id}/reservations/{reservation_with_rating.id}/finish/"
+    client.force_login(user)
+    response = client.post(finish_url, format='json')
+    input_data = response.data
+    input_data["rating"] = 5.0
+    response = client.post(finish_url, input_data, format='json')
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    with pytest.raises(ValidationError):
+        raise ValidationError('You can add evaluation only once.')
+    assert reservation_with_rating.rating == 1.0
 
 
 @freeze_time('2022-09-28 00:00:00')
