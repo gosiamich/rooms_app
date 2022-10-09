@@ -59,6 +59,7 @@ def test_create_room_wrong_data_RoomViewSet(client, superuser, room):
 
 @pytest.mark.django_db
 def test_create_room_duplicate_name_RoomViewSet(client, superuser, room):
+    """ValidationError('Find another name.')"""
     client.force_login(superuser)
     new_room = {
         'name': 'Yellow',
@@ -66,8 +67,7 @@ def test_create_room_duplicate_name_RoomViewSet(client, superuser, room):
     }
     response = client.post("/api/rooms/", new_room, format='json')
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    with pytest.raises(ValidationError):
-        raise ValidationError('Find another name.')
+
 
 
 @pytest.mark.django_db
@@ -84,14 +84,13 @@ def test_update_RoomViewSet(client, user, room):
 
 @pytest.mark.django_db
 def test_update_duplicate_name_RoomViewSet(client, user, room, room_simple_user):
+    """ValidationError("Find another name.")"""
     client.force_login(user)
     response = client.get(f"/api/rooms/{room.id}/", {}, format='json')
     input_data = response.data
     input_data["name"] = 'Grey'
     response = client.put(f"/api/rooms/{room.id}/", input_data, format='json')
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    with pytest.raises(ValidationError):
-        raise ValidationError("Find another name.")
 
 
 """Testing reservations"""
@@ -111,11 +110,10 @@ def test_list_ReservationViewSet(client, user, room, reservation):
 
 @pytest.mark.django_db
 def test_delete_reservation_ReservationViewSet(client, user, room, reservation):
+    """ValidationError("Delete function is not offered in this path.")"""
     client.force_login(user)
     response = client.delete(f"/api/rooms/{room.id}/reservations/{reservation.id}/", format='json')
     assert response.status_code == status.HTTP_403_FORBIDDEN
-    with pytest.raises(ValidationError):
-        raise ValidationError("Delete function is not offered in this path.")
 
 
 @freeze_time('2022-10-06 00:00:00')
@@ -152,6 +150,7 @@ def test_create_reservation_empty_data_ReservationViewSet(client, superuser, roo
 @freeze_time('2022-10-06 00:00:00')
 @pytest.mark.django_db
 def test_create_reservation_invalid_dates_ReservationViewSet(client, superuser, room):
+    """ValidationError('Finish must occur after start')"""
     client.force_login(superuser)
     new_reservation = {
         'room': room.id,
@@ -161,13 +160,12 @@ def test_create_reservation_invalid_dates_ReservationViewSet(client, superuser, 
     }
     response = client.post("/api/rooms/<pk>/reservations/", new_reservation, format='json')
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    with pytest.raises(ValidationError):
-        raise ValidationError('Finish must occur after start')
 
 
 @freeze_time('2022-10-06 00:00:00')
 @pytest.mark.django_db
 def test_create_reservation_dates_from_past_ReservationViewSet(client, superuser, room):
+    """ValidationError("Enter dates from future")"""
     client.force_login(superuser)
     new_reservation = {
         'room': room.id,
@@ -177,13 +175,12 @@ def test_create_reservation_dates_from_past_ReservationViewSet(client, superuser
     }
     response = client.post("/api/rooms/<pk>/reservations/", new_reservation, format='json')
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    with pytest.raises(ValidationError):
-        raise ValidationError("Enter dates from future")
 
 
 @freeze_time('2022-09-9 00:00:00')
 @pytest.mark.django_db
 def test_create_reservation_conflicting_dates_ReservationViewSet(client, superuser, room, reservation2):
+    """ValidationError('Room is reserved at this term')"""
     client.force_login(superuser)
     new_reservation = {
         'room': room.id,
@@ -193,8 +190,6 @@ def test_create_reservation_conflicting_dates_ReservationViewSet(client, superus
     }
     response = client.post("/api/rooms/<pk>/reservations/", new_reservation, format='json')
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    with pytest.raises(ValidationError):
-        raise ValidationError('Room is reserved at this term')
 
 
 @pytest.mark.django_db
@@ -243,6 +238,7 @@ def test_update_ReservationViewSet(client, user, room, reservation):
 @freeze_time('2022-08-06 00:00:00')
 @pytest.mark.django_db
 def test_invalid_dates_update_ReservationViewSet(client, user, room, reservation):
+    """ValidationError('Finish must occur after start')"""
     client.force_login(user)
     response = client.get(f"/api/rooms/{room.id}/reservations/{reservation.id}/", format='json')
     input_data = response.data
@@ -250,12 +246,12 @@ def test_invalid_dates_update_ReservationViewSet(client, user, room, reservation
     input_data["date_to"] = '2022-10-05'
     response = client.put(f"/api/rooms/{room.id}/reservations/{reservation.id}/", input_data, format='json')
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    with pytest.raises(ValidationError):
-        raise ValidationError('Finish must occur after start')
+
 
 @freeze_time('2022-08-06 00:00:00')
 @pytest.mark.django_db
 def test_past_dates_update_ReservationViewSet(client, user, room, reservation):
+    """ValidationError('Enter dates from future')"""
     client.force_login(user)
     response = client.get(f"/api/rooms/{room.id}/reservations/{reservation.id}/", format='json')
     input_data = response.data
@@ -263,12 +259,12 @@ def test_past_dates_update_ReservationViewSet(client, user, room, reservation):
     input_data["date_to"] = '2022-07-15'
     response = client.put(f"/api/rooms/{room.id}/reservations/{reservation.id}/", input_data, format='json')
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    with pytest.raises(ValidationError):
-        raise ValidationError('Enter dates from future')
+
 
 @freeze_time('2022-08-06 00:00:00')
 @pytest.mark.django_db
 def test_conflicting_dates_update_ReservationViewSet(client, user, room, reservation, reservation2):
+    """ValidationError('Room is reserved at this term')"""
     client.force_login(user)
     response = client.get(f"/api/rooms/{room.id}/reservations/{reservation.id}/", format='json')
     input_data = response.data
@@ -276,8 +272,6 @@ def test_conflicting_dates_update_ReservationViewSet(client, user, room, reserva
     input_data["date_to"] = '2022-09-24'
     response = client.put(f"/api/rooms/{room.id}/reservations/{reservation.id}/", input_data, format='json')
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    with pytest.raises(ValidationError):
-        raise ValidationError('Room is reserved at this term')
 
 
 @pytest.mark.django_db
@@ -296,7 +290,7 @@ def test_forbidden_finish_ReservationViewSet(client, simple_user, room, reservat
 @pytest.mark.django_db
 @freeze_time('2022-10-06 00:00:00')
 def test_attemp_before_training_finish_ReservationViewSet(client, user, room, reservation):
-    """Rating may be added after event"""
+    """ValidationError('You can add evaluation after training.')"""
     finish_url = f"/api/rooms/{room.id}/reservations/{reservation.id}/finish/"
     client.force_login(user)
     response = client.post(finish_url, format='json')
@@ -304,15 +298,13 @@ def test_attemp_before_training_finish_ReservationViewSet(client, user, room, re
     input_data["rating"] = 2.0
     response = client.post(finish_url, input_data, format='json')
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    with pytest.raises(ValidationError):
-        raise ValidationError('You can add evaluation after training.')
     assert not reservation.rating
 
 
 @pytest.mark.django_db
 @freeze_time('2022-08-06 00:00:00')
 def test_second_attemp_finish_ReservationViewSet(client, user, room, reservation_with_rating):
-    """Rating may be added after event"""
+    """ValidationError('You can add evaluation only once.')"""
     finish_url = f"/api/rooms/{room.id}/reservations/{reservation_with_rating.id}/finish/"
     client.force_login(user)
     response = client.post(finish_url, format='json')
@@ -320,8 +312,6 @@ def test_second_attemp_finish_ReservationViewSet(client, user, room, reservation
     input_data["rating"] = 5.0
     response = client.post(finish_url, input_data, format='json')
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    with pytest.raises(ValidationError):
-        raise ValidationError('You can add evaluation only once.')
     assert reservation_with_rating.rating == 1.0
 
 
