@@ -73,9 +73,8 @@ class FinishReservationSerializer(serializers.ModelSerializer):
 
 class CancelSerializer(serializers.ModelSerializer):
     reservation_status = serializers.ChoiceField(choices=(
-        (1, 'Confirmed'),
+        (0, 'Waiting to be confirmed'),
         (2, 'Cancelled'),
-        (3, 'Rejected'),
     )
     )
 
