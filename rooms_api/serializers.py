@@ -20,6 +20,8 @@ class RoomSerializer(serializers.ModelSerializer):
 
 class ReservationSerializer(serializers.ModelSerializer):
     owner = serializers.ReadOnlyField(source='owner.username')
+    room = serializers.StringRelatedField()
+    # room = RoomSerializer()
 
     class Meta:
         model = Reservation
