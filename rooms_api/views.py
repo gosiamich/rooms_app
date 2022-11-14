@@ -7,6 +7,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rooms_api.models import Reservation, Room
+from rooms_api.pagination import SmallSetPagination
 from rooms_api.permissions import IsOwnerOrReadOnly, RoomManagerPermission
 from rooms_api.serializers import ReservationSerializer, RoomSerializer, ConfirmationSerializer, \
     FinishReservationSerializer, CancelSerializer, ReservationWithPasswordSerializer
@@ -14,14 +15,16 @@ from rooms_api.serializers import ReservationSerializer, RoomSerializer, Confirm
 
 class RoomViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = Room.objects.all()
+    queryset = Room.objects.all().order_by('id')
     serializer_class = RoomSerializer
+    pagination_class = SmallSetPagination
 
 
 class ReservationViewSet(viewsets.ModelViewSet):
-    queryset = Reservation.objects.all()
+    queryset = Reservation.objects.all().order_by('id')
     serializer_class = ReservationSerializer
     permission_classes = (IsOwnerOrReadOnly, IsAuthenticated)
+    pagination_class = SmallSetPagination
 
     def get_serializer_class(self):
         """Return appropriate serializer class"""
