@@ -5,6 +5,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 from rooms_api.models import Reservation, Room
 from rooms_api.pagination import SmallSetPagination
@@ -18,6 +19,9 @@ class RoomViewSet(viewsets.ModelViewSet):
     queryset = Room.objects.all().order_by('id')
     serializer_class = RoomSerializer
     pagination_class = SmallSetPagination
+    filter_backends = [SearchFilter]
+    search_fields = ['name']
+
 
 
 class ReservationViewSet(viewsets.ModelViewSet):
